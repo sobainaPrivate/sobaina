@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
+import CoinCounter from "@/components/coin-counter";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -37,7 +38,7 @@ export default function Navbar() {
       <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
         <Link href="/">
           <span className="font-serif text-2xl font-bold tracking-tighter text-white hover:text-white/80 transition-colors cursor-pointer select-none flex items-center gap-1 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">
-            S
+            Sk
           </span>
         </Link>
 
@@ -59,12 +60,15 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </div>
+            <span className="text-[10px] uppercase tracking-widest text-white/70 font-medium">Open to Work</span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-white/70 font-medium">Open to Work</span>
+          <CoinCounter />
         </div>
       </div>
     </motion.header>

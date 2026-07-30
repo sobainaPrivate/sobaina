@@ -195,7 +195,7 @@ export default function Hero() {
         <p className="text-lg md:text-2xl font-medium text-white/60 tracking-tight font-sans mb-2 md:mb-3">
           Hi, I'm
         </p>
-        <h1 className="text-[11vw] md:text-[9vw] font-bold tracking-tighter text-white leading-[0.85] font-sans">
+        <h1 className="text-[4vw] md:text-[9vw] font-bold tracking-tighter text-white leading-[0.85] font-sans">
           <ScrambleText text="SOBAINA" />
         </h1>
 
