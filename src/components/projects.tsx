@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { projects, Project } from "../data/projects";
+import { projects, Project } from "../data/dev/projects";
 
 function ProjectRow({ project, index }: { project: Project; index: number }) {
   const [, setLocation] = useLocation();

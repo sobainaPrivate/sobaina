@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# local environment (e.g. VITE_WEB3FORMS_KEY)
+.env
+.env.local
+.env.*.local
+
+# Windows folder metadata
+desktop.ini
+Thumbs.db

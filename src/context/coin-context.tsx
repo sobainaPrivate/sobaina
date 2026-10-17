@@ -2,30 +2,26 @@ import { createContext, useContext, useState, useCallback, ReactNode } from "rea
 
 interface Toast {
   id: number;
+  sectionId: string;
   amount: number;
   label: string;
 }
 
 interface CoinContextValue {
   coins: number;
+  earnedIds: string[];
   toasts: Toast[];
   earnSection: (id: string, amount: number, label: string) => void;
   dismissToast: (id: number) => void;
 }
 
 const CoinContext = createContext<CoinContextValue | null>(null);
-const STORAGE_KEY = "portfolio-coins";
-const EARNED_KEY = "portfolio-earned-sections";
 
+// Intentionally no localStorage here — coins and badges reset to zero
+// every time the page is refreshed, so the "unlock" moment replays.
 export function CoinProvider({ children }: { children: ReactNode }) {
-  const [coins, setCoins] = useState<number>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-  const [earnedSections, setEarnedSections] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem(EARNED_KEY);
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
+  const [coins, setCoins] = useState<number>(0);
+  const [earnedSections, setEarnedSections] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const earnSection = useCallback((id: string, amount: number, label: string) => {
@@ -33,16 +29,11 @@ export function CoinProvider({ children }: { children: ReactNode }) {
       if (prev.has(id)) return prev;
       const next = new Set(prev);
       next.add(id);
-      localStorage.setItem(EARNED_KEY, JSON.stringify([...next]));
 
-      setCoins((c) => {
-        const updated = c + amount;
-        localStorage.setItem(STORAGE_KEY, String(updated));
-        return updated;
-      });
+      setCoins((c) => c + amount);
 
       const toastId = Date.now();
-      setToasts((t) => [...t, { id: toastId, amount, label }]);
+      setToasts((t) => [...t, { id: toastId, sectionId: id, amount, label }]);
       setTimeout(() => {
         setToasts((t) => t.filter((toast) => toast.id !== toastId));
       }, 3200);
@@ -56,7 +47,9 @@ export function CoinProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <CoinContext.Provider value={{ coins, toasts, earnSection, dismissToast }}>
+    <CoinContext.Provider
+      value={{ coins, earnedIds: [...earnedSections], toasts, earnSection, dismissToast }}
+    >
       {children}
     </CoinContext.Provider>
   );

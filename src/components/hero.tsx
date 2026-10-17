@@ -1,264 +1,136 @@
-import { useEffect, useRef, useState, ReactNode } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { ArrowDown, ArrowUpRight } from "lucide-react";
+import BloomingName from "@/components/bloom/blooming-name";
+import HeroCursor from "@/components/hero-cursor";
 
-const taglines = [
-  "UI/UX Designer",
-  "Software Developer",
-  "Creative Technologist"
-];
+// three.js is split into its own chunk so the copy paints before the 3D loads.
+const HeroScene = lazy(() => import("@/components/hero-scene/scene"));
 
-const MOUSE_MAGNETIC_RADIUS = 80;
+const AUTO_TOGGLE_MS = 3800;
 
-function MagneticButton({ children, href, className, primary }: { children: ReactNode; href: string; className?: string; primary?: boolean }) {
-  const ref = useRef<HTMLAnchorElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const springConfig = { stiffness: 150, damping: 15, mass: 0.1 };
-  const smoothX = useSpring(x, springConfig);
-  const smoothY = useSpring(y, springConfig);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const distanceX = e.clientX - centerX;
-    const distanceY = e.clientY - centerY;
-    const distance = Math.sqrt(distanceX ** 2 + distanceY ** 2);
-
-    if (distance < MOUSE_MAGNETIC_RADIUS) {
-      x.set(distanceX * 0.3);
-      y.set(distanceY * 0.3);
-    } else {
-      x.set(0);
-      y.set(0);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
+function ModeToggle({ rendered, onChange }: { rendered: boolean; onChange: (v: boolean) => void }) {
   return (
-    <motion.a
-      ref={ref}
-      href={href}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ x: smoothX, y: smoothY }}
-      className={`relative inline-flex items-center justify-center magnetic ${className}`}
-      data-cursor={primary ? "" : ""}
-    >
-      {children}
-    </motion.a>
+    <div className="inline-flex items-center rounded-full border border-white/15 bg-black/40 p-1 backdrop-blur-md font-mono text-[11px] uppercase tracking-[0.18em]">
+      {[
+        { label: "Wireframe", value: false },
+        { label: "Render", value: true },
+      ].map((opt) => {
+        const active = rendered === opt.value;
+        return (
+          <button
+            key={opt.label}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(opt.value)}
+            className={`relative rounded-full px-4 py-2 transition-colors duration-300 ${
+              active ? "text-black" : "text-white/55 hover:text-white"
+            }`}
+          >
+            {active && (
+              <motion.span
+                layoutId="hero-mode"
+                className="absolute inset-0 rounded-full bg-white"
+                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              />
+            )}
+            <span className="relative">{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-function ScrambleText({ text }: { text: string }) {
-  const [displayText, setDisplayText] = useState<string[]>(Array(text.length).fill(""));
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  
-  useEffect(() => {
-    const letters = text.split("");
-    let frame = 0;
-    
-    const update = setInterval(() => {
-      let resolvedCount = 0;
-      setDisplayText(letters.map((char, index) => {
-        if (char === " ") return " ";
-        if (frame > index * 4 + 10) {
-          resolvedCount++;
-          return char;
-        }
-        return chars[Math.floor(Math.random() * chars.length)];
-      }));
-      
-      frame++;
-      if (resolvedCount === letters.length) {
-        clearInterval(update);
-      }
-    }, 40);
-    
-    return () => clearInterval(update);
-  }, [text]);
-
-  return <>{displayText.join("")}</>;
-}
+const rise = (delay: number) => ({
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] as const },
+});
 
 export default function Hero() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [taglineIndex, setTaglineIndex] = useState(0);
+  const [rendered, setRendered] = useState(false);
+  const [auto, setAuto] = useState(true);
 
-  // Cycle taglines
+  // Demo the transition on its own until the visitor takes over.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTaglineIndex((prev) => (prev + 1) % taglines.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!auto) return;
+    const id = setInterval(() => setRendered((r) => !r), AUTO_TOGGLE_MS);
+    return () => clearInterval(id);
+  }, [auto]);
 
-  // Canvas particle grid effect
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  const choose = (value: boolean) => {
+    setAuto(false);
+    setRendered(value);
+  };
 
-    let animationFrameId: number;
-    let mouse = { x: -1000, y: -1000 };
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-
-    const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width;
-      canvas.height = height;
-    };
-    window.addEventListener("resize", resize);
-    resize();
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-
-    const spacing = 40;
-    const cols = Math.floor(width / spacing) + 2;
-    const rows = Math.floor(height / spacing) + 2;
-
-    const dots: { x: number; y: number; originX: number; originY: number }[] = [];
-    for (let i = 0; i < cols; i++) {
-      for (let j = 0; j < rows; j++) {
-        const x = i * spacing;
-        const y = j * spacing;
-        dots.push({ x, y, originX: x, originY: y });
-      }
-    }
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-
-      for (let i = 0; i < dots.length; i++) {
-        const dot = dots[i];
-        
-        const dx = mouse.x - dot.x;
-        const dy = mouse.y - dot.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        const maxDist = 150;
-        const force = Math.max(0, maxDist - dist) / maxDist;
-        
-        if (dist < maxDist) {
-          const angle = Math.atan2(dy, dx);
-          const pushX = Math.cos(angle) * force * 15;
-          const pushY = Math.sin(angle) * force * 15;
-          
-          dot.x += (dot.originX + pushX - dot.x) * 0.1;
-          dot.y += (dot.originY + pushY - dot.y) * 0.1;
-        } else {
-          dot.x += (dot.originX - dot.x) * 0.05;
-          dot.y += (dot.originY - dot.y) * 0.05;
-        }
-
-        ctx.beginPath();
-        ctx.arc(dot.x, dot.y, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      animationFrameId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", handleMouseMove);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
+  // The hero is pinned for one extra screen of scroll; that scroll opens the buds.
+  const section = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: section, offset: ["start start", "end end"] });
+  const bloom = useSpring(useTransform(scrollYProgress, [0, 0.85], [0, 1]), { stiffness: 90, damping: 24 });
+  const hintOpacity = useTransform(bloom, [0, 0.15], [1, 0]);
 
   return (
-    <section className="relative w-full min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden text-center py-20">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 z-0 opacity-30 pointer-events-none"
-      />
-      <div className="absolute inset-0 z-0 bg-background/50 radial-gradient-mask pointer-events-none" 
-           style={{ background: 'radial-gradient(circle at center, transparent 0%, var(--color-background) 80%)' }} />
+    <section ref={section} className="relative h-[200vh] w-full bg-black">
+      <div className="sticky top-0 h-[100dvh] w-full overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_75%_55%,rgba(50,87,255,0.18),transparent),radial-gradient(40%_40%_at_15%_80%,rgba(255,20,0,0.14),transparent)]" />
+        <Suspense fallback={null}>
+          <HeroScene rendered={rendered} />
+        </Suspense>
+        <HeroCursor rendered={rendered} />
 
-      <div className="container relative z-10 px-6 md:px-12 flex flex-col items-center justify-center w-full">
-        <p className="text-lg md:text-2xl font-medium text-white/60 tracking-tight font-sans mb-2 md:mb-3">
-          Hi, I'm
-        </p>
-        <h1 className="text-[4vw] md:text-[9vw] font-bold tracking-tighter text-white leading-[0.85] font-sans">
-          <ScrambleText text="SOBAINA" />
-        </h1>
+        <div className="container relative z-10 mx-auto flex h-full flex-col justify-end px-6 pb-24 pt-32 md:px-12 lg:justify-center lg:pb-32">
+          <div className="max-w-xl">
+            <BloomingName
+              text="sobaina"
+              bloom={bloom}
+              suffix={<span className="text-primary">.</span>}
+              className="font-display text-[clamp(3.5rem,10vw,7.5rem)] font-bold lowercase leading-[0.9] tracking-[-0.02em] text-white"
+            />
 
-        <div className="mt-8 md:mt-12 h-10 md:h-16 overflow-hidden flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={taglineIndex}
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -40, opacity: 0 }}
-              transition={{ duration: 0.5, ease: "anticipate" }}
-              className="text-2xl md:text-4xl font-bold text-primary tracking-tight font-sans"
-            >
-              {taglines[taglineIndex]}
+            <motion.p {...rise(0.3)} className="mt-12 font-mono text-[11px] uppercase tracking-[0.25em] text-white/50">
+              UI/UX Designer <span className="text-primary">/</span> Frontend Developer
+            </motion.p>
+
+            <motion.p {...rise(0.35)} className="mt-4 max-w-md text-base leading-relaxed text-white/70 md:mt-8 md:text-xl">
+              I design interfaces, then I build them. From the first wireframe to the rendered,
+              shipped product, in one pair of hands.
+            </motion.p>
+
+            <motion.div {...rise(0.5)} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <ModeToggle rendered={rendered} onChange={choose} />
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">
+                {auto ? "Try it" : rendered ? "Surface" : "Structure"}
+              </span>
             </motion.div>
-          </AnimatePresence>
+
+            <motion.div {...rise(0.65)} className="mt-12 flex flex-wrap gap-4">
+              <a
+                href="#work"
+                className="group inline-flex items-center gap-3 rounded-full bg-primary px-7 py-4 text-sm font-semibold text-white transition-colors hover:bg-[#ff3a26]"
+              >
+                See the work
+                <ArrowDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
+              </a>
+              <a
+                href="#contact"
+                className="group inline-flex items-center gap-3 rounded-full border border-white/20 px-7 py-4 text-sm font-semibold text-white transition-colors hover:border-white/50"
+              >
+                Get in touch
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </a>
+            </motion.div>
+          </div>
         </div>
 
-        <motion.p
-          className="mt-6 md:mt-8 text-lg md:text-2xl text-muted-foreground max-w-3xl font-light leading-relaxed mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8, ease: "easeOut" }}
-        >
-          I design systems that feel inevitable and build products people fall in love with.
-        </motion.p>
-
-        <motion.div
-          className="mt-12 flex flex-col sm:flex-row gap-6 w-full sm:w-auto items-center justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1, ease: "easeOut" }}
-        >
-          <MagneticButton
-            href="#work"
-            primary
-            className="px-10 py-5 bg-white text-black rounded-full font-bold text-sm tracking-widest uppercase shadow-[0_0_40px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] transition-shadow duration-300 w-full sm:w-auto"
-          >
-            View Work
-          </MagneticButton>
-          <MagneticButton
-            href="#contact"
-            className="px-10 py-5 border border-white/20 rounded-full font-bold text-sm tracking-widest uppercase text-white hover:bg-white/5 transition-colors duration-300 w-full sm:w-auto"
-          >
-            Get in Touch
-          </MagneticButton>
-        </motion.div>
+        <div className="absolute inset-x-0 bottom-0 z-10 flex justify-between px-6 pb-6 font-mono text-[10px] uppercase tracking-[0.25em] text-white/35 md:px-12">
+          <span>Lahore, PK</span>
+          <motion.span style={{ opacity: hintOpacity }} className="hidden sm:inline">
+            Scroll — let it bloom
+          </motion.span>
+          <span>{rendered ? "fig. 02 — render · my live sites" : "fig. 01 — wireframe"}</span>
+        </div>
       </div>
-
-      <motion.div 
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/40"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2, duration: 0.8 }}
-      >
-        <span className="text-[10px] uppercase tracking-[0.3em] font-medium">Scroll</span>
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <ChevronDown className="w-4 h-4" />
-        </motion.div>
-      </motion.div>
     </section>
   );
 }

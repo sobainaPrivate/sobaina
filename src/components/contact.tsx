@@ -1,19 +1,55 @@
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Github, Linkedin, Dribbble, Mail, ArrowRight } from "lucide-react";
+import { Github, Linkedin, Mail, ArrowRight } from "lucide-react";
+import { CONTACT_EMAIL, sendMessage } from "@/lib/send-message";
+
+type Status = "idle" | "sending" | "sent" | "mailto" | "error";
+
+const statusLabel: Record<Exclude<Status, "idle" | "sending">, string> = {
+  sent: "Sent, I'll be in touch!",
+  mailto: "Opening your email app…",
+  error: "Couldn't send. Email me instead?",
+};
+
+const socials = [
+  { icon: Github, href: "https://github.com/sobainaPrivate", label: "GitHub" },
+  { icon: Linkedin, href: "https://www.linkedin.com/in/sobaina-sheikh/", label: "LinkedIn" },
+  { icon: Mail, href: `mailto:${CONTACT_EMAIL}`, label: CONTACT_EMAIL },
+];
+
+/** The current time in Lahore, ticking every 30s. */
+function useLahoreTime() {
+  const format = () =>
+    new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Karachi", hour: "numeric", minute: "2-digit" }).format(new Date());
+  const [time, setTime] = useState(format);
+  useEffect(() => {
+    const id = setInterval(() => setTime(format()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
 
 export default function Contact() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSent, setIsSent] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
+  const time = useLahoreTime();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSent(true);
-      setTimeout(() => setIsSent(false), 5000);
-    }, 1500);
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    setStatus("sending");
+    try {
+      const result = await sendMessage({
+        name: String(data.get("name") ?? ""),
+        email: String(data.get("email") ?? ""),
+        message: String(data.get("message") ?? ""),
+      });
+      setStatus(result);
+      if (result === "sent") form.reset();
+    } catch {
+      setStatus("error");
+    }
+    setTimeout(() => setStatus("idle"), 5000);
   };
 
   return (
@@ -26,13 +62,13 @@ export default function Contact() {
           transition={{ duration: 0.8 }}
           className="mb-24"
         >
-          <h2 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40 mb-6">
+          <h2 className="font-display text-5xl md:text-7xl font-normal tracking-tight leading-[1.05] text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40 mb-6">
             Let's Make<br />
             Something<br />
             Unforgettable.
           </h2>
           <p className="text-lg text-white/40 uppercase tracking-widest font-medium">
-            Open to senior roles & select projects.
+            Graduating soon · full-time, internships & freelance · remote or anywhere.
           </p>
         </motion.div>
 
@@ -52,6 +88,7 @@ export default function Contact() {
                   </label>
                   <input 
                     id="name"
+                    name="name"
                     type="text" 
                     required
                     className="w-full bg-transparent border-b border-white/20 py-3 text-white text-lg focus:outline-none focus:border-white transition-colors"
@@ -64,6 +101,7 @@ export default function Contact() {
                   </label>
                   <input 
                     id="email"
+                    name="email"
                     type="email" 
                     required
                     className="w-full bg-transparent border-b border-white/20 py-3 text-white text-lg focus:outline-none focus:border-white transition-colors"
@@ -78,6 +116,7 @@ export default function Contact() {
                 </label>
                 <textarea 
                   id="message"
+                  name="message"
                   required
                   rows={1}
                   className="w-full bg-transparent border-b border-white/20 py-3 text-white text-lg focus:outline-none focus:border-white transition-colors resize-none overflow-hidden min-h-[44px]"
@@ -92,11 +131,11 @@ export default function Contact() {
               
               <button
                 type="submit"
-                disabled={isSubmitting || isSent}
+                disabled={status !== "idle"}
                 className="mt-8 group w-full bg-white text-black py-6 rounded-full font-bold text-sm tracking-widest uppercase flex items-center justify-center gap-4 hover:bg-white/90 transition-all disabled:opacity-70 disabled:cursor-not-allowed magnetic"
               >
                 <AnimatePresence mode="wait">
-                  {isSubmitting ? (
+                  {status === "sending" ? (
                     <motion.div
                       key="submitting"
                       initial={{ opacity: 0, scale: 0.8 }}
@@ -104,15 +143,15 @@ export default function Contact() {
                       exit={{ opacity: 0, scale: 0.8 }}
                       className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin"
                     />
-                  ) : isSent ? (
+                  ) : status !== "idle" ? (
                     <motion.span
-                      key="sent"
+                      key={status}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       className="text-primary"
                     >
-                      Sent Successfully!
+                      {statusLabel[status]}
                     </motion.span>
                   ) : (
                     <motion.span
@@ -140,12 +179,7 @@ export default function Contact() {
           >
             <div className="flex flex-col gap-6">
               <span className="text-xs font-bold uppercase tracking-widest text-white/40">Socials</span>
-              {[
-                { icon: Github, href: "https://github.com", label: "GitHub" },
-                { icon: Linkedin, href: "https://linkedin.com", label: "LinkedIn" },
-                { icon: Dribbble, href: "https://dribbble.com", label: "Dribbble" },
-                { icon: Mail, href: "mailto:hello@example.com", label: "Email" },
-              ].map((social) => (
+              {socials.map((social) => (
                 <a
                   key={social.label}
                   href={social.href}
@@ -161,7 +195,7 @@ export default function Contact() {
             
             <div className="flex flex-col gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-white/40">Location</span>
-              <span className="text-white/80 leading-relaxed">Lahore , Pakistan <br/>09:41 AM (PST)</span>
+              <span className="text-white/80 leading-relaxed">Lahore, Pakistan <br />{time} (PKT)</span>
             </div>
           </motion.div>
         </div>

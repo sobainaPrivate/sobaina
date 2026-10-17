@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
+import Cat from "@/components/cat";
 
 function AnimatedCounter({ end, duration = 1.5, suffix = "" }: { end: number, duration?: number, suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -33,93 +34,80 @@ function AnimatedCounter({ end, duration = 1.5, suffix = "" }: { end: number, du
 }
 
 const stats = [
-  { label: "Years Experience", value: 6, suffix: "" },
-  { label: "Projects", value: 40, suffix: "+" },
-  { label: "Happy Clients", value: 12, suffix: "" },
+  { label: "Live websites", value: 3 },
+  { label: "Projects", value: 7 },
 ];
 
+const tools = [
+  { group: "Design", items: ["Figma", "Canva", "Wireframing", "Prototyping", "Usability testing"] },
+  { group: "Build", items: ["React", "Next.js", "Node.js", "TypeScript", "Tailwind", "Jekyll", "Vercel"] },
+];
+
+const rise = (delay = 0) => ({
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-100px" },
+  transition: { duration: 0.8, delay },
+});
+
 export default function About() {
-  const row1 = "FIGMA · PRINCIPLE · FRAMER · ADOBE XD · PROTOTYPING · DESIGN SYSTEMS · ";
-  const row2 = "REACT · TYPESCRIPT · TAILWIND · FRAMER MOTION · FASTAPI · FIREBASE · POSTGRESQL · ";
-
   return (
-    <section id="about" className="py-32 relative bg-zinc-950 overflow-hidden">
-      <div className="container mx-auto px-6 md:px-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-          
-          {/* Bio Side */}
-          <div className="relative">
-            <span className="absolute -top-16 -left-8 text-[120px] text-primary/10 font-serif leading-none select-none pointer-events-none">
-              "
-            </span>
-            <div className="relative z-10 space-y-8 text-xl md:text-2xl text-muted-foreground font-light leading-relaxed">
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8 }}
-                className="text-white"
-              >
-                I'm Sobaina, a designer-developer hybrid based in Lahore. I've spent the last few years crafting digital experiences at the intersection of human psychology and systems thinking.
-              </motion.p>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8, delay: 0.1 }}
-              >
-                I don't just hand off Figma files. I believe the best products are built by those who understand both the creative intent and the technical constraints. I write production-ready code to ensure the final product feels exactly how it was designed to feel.
-              </motion.p>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="italic"
-              >
-                Currently open to senior roles and select freelance projects.
-              </motion.p>
-            </div>
-            
-            <div className="mt-16 flex gap-12 md:gap-16 border-t border-white/10 pt-8">
-              {stats.map((stat, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <span className="text-5xl font-bold text-white font-sans">
-                    <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                  </span>
-                  <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium max-w-[100px] leading-tight">
-                    {stat.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+    <section id="about" className="relative overflow-hidden bg-zinc-950 py-32">
+      <div className="container mx-auto grid grid-cols-1 items-center gap-16 px-6 md:px-12 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <motion.p {...rise()} className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/45">
+            About
+          </motion.p>
+          <motion.h2 {...rise(0.05)} className="mt-4 max-w-xl font-display text-4xl leading-[1.1] text-white md:text-5xl">
+            Always wondering <em className="text-primary">why</em> things are designed the way they are.
+          </motion.h2>
 
-          {/* Skills Side */}
-          <div className="flex flex-col justify-center h-full pt-16 lg:pt-0">
-            <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.3em] mb-12 lg:mb-16">Capabilities & Tools</h3>
-            
-            <div className="flex flex-col gap-4 w-[150vw] md:w-auto -ml-6 md:ml-0 overflow-hidden">
-              <div className="flex w-max marquee-content">
-                <div className="text-sm md:text-base text-white/50 py-4 border-y border-white/5 tracking-[0.3em] uppercase font-medium whitespace-nowrap px-4">
-                  {row1}
-                </div>
-                <div className="text-sm md:text-base text-white/50 py-4 border-y border-white/5 tracking-[0.3em] uppercase font-medium whitespace-nowrap px-4">
-                  {row1}
-                </div>
+          <motion.div {...rise(0.1)} className="mt-8 max-w-xl space-y-4 text-lg leading-relaxed text-white/65">
+            <p>
+              An HCI course got me hooked on the psychology behind everyday design, from a teacup to a switchboard. A
+              UI/UX internship at a software house turned that into craft.
+            </p>
+            <p>
+              Now I design and build for real people, and I graduate soon, open to work remote or anywhere.
+            </p>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/40">
+              Off-screen: cats. That's why there's one <span className="hidden lg:inline">on the right</span>
+              <span className="lg:hidden">below</span> 🐾
+            </p>
+          </motion.div>
+
+          <motion.div {...rise(0.15)} className="mt-10 flex gap-12 border-t border-white/10 pt-8">
+            {stats.map((stat) => (
+              <div key={stat.label} className="flex flex-col gap-1">
+                <span className="font-display text-5xl text-white">
+                  <AnimatedCounter end={stat.value} />
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">{stat.label}</span>
               </div>
-              
-              <div className="flex w-max marquee-content-reverse">
-                <div className="text-sm md:text-base text-white/50 py-4 border-b border-white/5 tracking-[0.3em] uppercase font-medium whitespace-nowrap px-4">
-                  {row2}
-                </div>
-                <div className="text-sm md:text-base text-white/50 py-4 border-b border-white/5 tracking-[0.3em] uppercase font-medium whitespace-nowrap px-4">
-                  {row2}
-                </div>
+            ))}
+          </motion.div>
+
+          <motion.div {...rise(0.2)} className="mt-10 space-y-4">
+            {tools.map((row) => (
+              <div key={row.group} className="flex flex-wrap items-center gap-2">
+                <span className="mr-2 w-14 font-mono text-[11px] uppercase tracking-[0.18em] text-white/40">{row.group}</span>
+                {row.items.map((tool) => (
+                  <span key={tool} className="rounded-full border border-white/12 px-3 py-1 text-sm text-white/70">
+                    {tool}
+                  </span>
+                ))}
               </div>
-            </div>
-          </div>
+            ))}
+          </motion.div>
         </div>
+
+        <motion.div {...rise(0.2)} className="flex justify-center lg:col-span-5">
+          <div className="relative pt-12">
+            <Cat className="h-56 w-[244px]" />
+            {/* The ledge it sits on. */}
+            <div className="mx-auto -mt-1 h-px w-72 bg-white/15" />
+          </div>
+        </motion.div>
       </div>
     </section>
   );

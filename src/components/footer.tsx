@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className="py-12 border-t border-white/5 bg-background">
-      <div className="container mx-auto px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4">
+    <footer className="relative border-t border-white/10 bg-background py-12">
+      <div className="container relative mx-auto flex flex-col items-center justify-between gap-4 px-6 md:flex-row md:px-12">
         <p className="text-muted-foreground text-sm">
           © {new Date().getFullYear()} Sobaina · Designed & Built by Sobaina
         </p>

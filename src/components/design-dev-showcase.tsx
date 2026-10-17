@@ -1,167 +1,247 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Folder, X, ExternalLink, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { figmaProjects, type FigmaProject } from "@/data/figma-projects";
 
-type Mode = "design" | "dev";
+// Computes a fan-out position for item `i` of `total`, so the bouquet
+// always has enough slots no matter how many projects are in the data file.
+function getBouquetPosition(i: number, total: number) {
+  const spreadDeg = Math.min(40 + total * 12, 160);
+  const radius = 170 + total * 10;
+  const t = total > 1 ? i / (total - 1) : 0.5;
+  const deg = -spreadDeg / 2 + t * spreadDeg;
+  const rad = (deg * Math.PI) / 180;
+  return {
+    x: radius * Math.sin(rad),
+    y: -radius * Math.cos(rad),
+    rotate: deg * 0.5,
+  };
+}
 
-const codeLines = [
-  { indent: 0, text: "export function LeadCard({ lead }: Props) {" },
-  { indent: 1, text: "return (" },
-  { indent: 2, text: '<div className="rounded-xl bg-surface p-4">' },
-  { indent: 3, text: "<Avatar src={lead.photo} />" },
-  { indent: 3, text: "<h3>{lead.name}</h3>" },
-  { indent: 3, text: '<Badge tone="teal">{lead.status}</Badge>' },
-  { indent: 2, text: "</div>" },
-  { indent: 1, text: ");" },
-  { indent: 0, text: "}" },
-];
+/** <img> with a graceful fallback frame when the real export hasn't been added yet. */
+function ProjectImage({
+  src,
+  color,
+  label,
+  className,
+}: {
+  src?: string;
+  color: string;
+  label?: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
 
-const annotations = [
-  { top: "18%", left: "12%", width: "34%", height: "16%", note: "Increase padding to 24px" },
-  { top: "42%", left: "55%", width: "30%", height: "12%", note: "Use brand teal for status" },
-  { top: "68%", left: "18%", width: "40%", height: "14%", note: "Avatar needs a fallback state" },
-];
-
-function TypedLine({ text, indent, delay }: { text: string; indent: number; delay: number }) {
-  const [shown, setShown] = useState("");
-
-  useEffect(() => {
-    setShown("");
-    let i = 0;
-    const start = setTimeout(() => {
-      const interval = setInterval(() => {
-        i++;
-        setShown(text.slice(0, i));
-        if (i >= text.length) clearInterval(interval);
-      }, 14);
-    }, delay);
-    return () => clearTimeout(start);
-  }, [text, delay]);
+  if (failed || !src) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center gap-2 ${className}`}
+        style={{ backgroundColor: color + "1A" }}
+      >
+        <ImageOff className="w-5 h-5" style={{ color }} />
+        {label && <span className="text-[10px] text-white/30 px-2 text-center">{label}</span>}
+      </div>
+    );
+  }
 
   return (
-    <div style={{ paddingLeft: `${indent * 1.25}rem` }} className="whitespace-pre">
-      <span className="text-teal">{shown}</span>
-      <motion.span
-        className="inline-block w-[2px] h-4 bg-teal/70 ml-0.5 align-middle"
-        animate={{ opacity: [1, 0] }}
-        transition={{ duration: 0.6, repeat: Infinity }}
-      />
+    <img
+      src={src}
+      alt={label ?? ""}
+      onError={() => setFailed(true)}
+      className={`object-cover ${className}`}
+    />
+  );
+}
+
+function ExpandedProject({
+  project,
+  onClose,
+}: {
+  project: FigmaProject;
+  onClose: () => void;
+}) {
+  const [screenIndex, setScreenIndex] = useState(0);
+  const screen = project.screens[screenIndex];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+      className="absolute inset-3 md:inset-6 z-30 rounded-xl overflow-hidden border border-white/10 bg-[#0d0d0f] flex flex-col md:flex-row"
+    >
+      {project.pdf ? (
+        <div className="relative flex-1 min-h-[55%] md:min-h-full bg-black/30">
+          <iframe
+            src={project.pdf}
+            title={project.name}
+            className="w-full h-full border-0"
+          />
+        </div>
+      ) : (
+        <div className="relative flex-1 min-h-[55%] md:min-h-full bg-black/30 flex items-center justify-center p-4 md:p-6">
+          <div className="relative h-full max-h-full rounded-[1.5rem] overflow-hidden border border-white/10 shadow-2xl bg-black aspect-[1242/2688]">
+            <ProjectImage
+              src={screen}
+              color={project.color}
+              label={screen ? `Add ${screen.split("/").pop()}` : "No screens added yet"}
+              className="w-full h-full"
+            />
+          </div>
+
+          {project.screens.length > 1 && (
+            <>
+              <button
+                onClick={() =>
+                  setScreenIndex((i) => (i === 0 ? project.screens.length - 1 : i - 1))
+                }
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white/70 hover:text-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setScreenIndex((i) => (i + 1) % project.screens.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white/70 hover:text-white"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {project.screens.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setScreenIndex(i)}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                      i === screenIndex ? "bg-white" : "bg-white/25"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="w-full md:w-64 p-6 flex flex-col shrink-0 border-t md:border-t-0 md:border-l border-white/10 overflow-hidden">
+        <div className="overflow-y-auto pr-1">
+          <p className="text-xs uppercase tracking-widest text-white/40 mb-2">
+            {project.platform === "figma" ? "Figma file" : "Canva file"}
+          </p>
+          <h3 className="text-xl font-bold text-white">{project.name}</h3>
+          <p className="text-sm text-white/50 mt-2 leading-relaxed">{project.description}</p>
+          <p className="text-xs text-white/30 mt-3">
+            {project.pdf
+              ? "Scroll to view all pages"
+              : `${screenIndex + 1} / ${project.screens.length} curated screens`}
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 mt-6 shrink-0">
+          <a
+            href={project.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest text-black bg-white rounded-full py-2.5 hover:opacity-90 transition-opacity"
+          >
+            {project.platform === "figma" ? "View full project" : "View in Canva"}{" "}
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest text-white/60 hover:text-white transition-colors"
+          >
+            <X className="w-3.5 h-3.5" /> Close
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function DesignPanel() {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const selectedProject = figmaProjects.find((f) => f.id === selected) ?? null;
+
+  return (
+    <div className="absolute inset-0 flex items-center translate-y-16 justify-center">
+      <motion.button
+        onClick={() => setOpen((o) => !o)}
+        className="relative z-10 flex flex-col items-center gap-3 group"
+        whileTap={{ scale: 0.95 }}
+      >
+        <motion.div
+          animate={open ? { y: -6 } : { y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
+          <Folder
+            className="w-24 h-24 text-primary/80 group-hover:text-primary transition-colors"
+            strokeWidth={1.25}
+            fill="currentColor"
+            fillOpacity={0.12}
+          />
+        </motion.div>
+        <span className="text-xs uppercase tracking-widest text-white/40">
+          {open ? "Close folder" : "Design projects"}
+        </span>
+      </motion.button>
+
+      <AnimatePresence>
+        {open &&
+          figmaProjects.map((project, i) => {
+            const pos = getBouquetPosition(i, figmaProjects.length);
+            return (
+              <motion.button
+                key={project.id}
+                onClick={() => setSelected(project.id)}
+                className="absolute z-20 flex flex-col items-center gap-1.5"
+                initial={{ x: 0, y: 0, opacity: 0, scale: 0.4, rotate: 0 }}
+                animate={{ x: pos.x, y: pos.y, opacity: 1, scale: 1, rotate: pos.rotate }}
+                exit={{ x: 0, y: 0, opacity: 0, scale: 0.4, transition: { duration: 0.25 } }}
+                transition={{ type: "spring", stiffness: 260, damping: 20, delay: i * 0.07 }}
+                whileHover={{ scale: 1.08, rotate: 0, y: pos.y - 8 }}
+              >
+                <ProjectImage
+                  src={project.cover}
+                  color={project.color}
+                  className="w-20 h-20 rounded-lg border border-white/10 shadow-lg"
+                />
+                <span className="text-[10px] text-white/60 whitespace-nowrap">
+                  {project.name}
+                </span>
+              </motion.button>
+            );
+          })}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedProject && (
+          <ExpandedProject project={selectedProject} onClose={() => setSelected(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 export default function DesignDevShowcase() {
-  const [mode, setMode] = useState<Mode>("design");
-
   return (
-    <section className="relative w-full py-24 px-6 md:px-12">
+    <section id="folder" className="relative w-full py-24 px-6 md:px-12">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-2">
-              How I actually work
-            </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white">
-              Same screen, two brains
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1">
-            {(["design", "dev"] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-full transition-colors duration-300 ${
-                  mode === m ? "text-black" : "text-white/50 hover:text-white/80"
-                }`}
-              >
-                {mode === m && (
-                  <motion.div
-                    layoutId="mode-pill"
-                    className="absolute inset-0 rounded-full bg-white"
-                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">{m === "design" ? "Design" : "Dev"}</span>
-              </button>
-            ))}
-          </div>
+        <div className="mb-8">
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/45 mb-3">
+            Still curious?
+          </p>
+          <h2 className="font-display text-4xl md:text-5xl text-white">
+            Open the folder<span className="text-primary">.</span>
+          </h2>
+          <p className="mt-3 text-sm text-white/55 max-w-sm">
+            Every project in full: all the screens, the PDFs and the source files.
+          </p>
         </div>
 
         <div className="relative rounded-2xl border border-white/10 bg-[#0d0d0f] overflow-hidden aspect-[16/10]">
-          <AnimatePresence mode="wait">
-            {mode === "design" ? (
-              <motion.div
-                key="design"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute inset-0 p-6"
-              >
-                {/* mock UI screen — swap this block for a real screenshot <img> if you have one */}
-                <div className="w-full h-full rounded-lg bg-[#141418] p-6 relative overflow-hidden">
-                  <div className="h-3 w-24 rounded-full bg-white/10 mb-4" />
-                  <div className="h-2 w-40 rounded-full bg-white/5 mb-8" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="h-20 rounded-lg bg-teal/10 border border-teal/20" />
-                    <div className="h-20 rounded-lg bg-gold/10 border border-gold/20" />
-                  </div>
-
-                  {annotations.map((a, i) => (
-                    <div key={i}>
-                      <motion.svg
-                        className="absolute pointer-events-none"
-                        style={{ top: a.top, left: a.left, width: a.width, height: a.height }}
-                        viewBox="0 0 100 100"
-                        preserveAspectRatio="none"
-                      >
-                        <motion.rect
-                          x="1" y="1" width="98" height="98"
-                          rx="4"
-                          fill="none"
-                          stroke="#1D9E75"
-                          strokeWidth="1.5"
-                          strokeDasharray="6 4"
-                          initial={{ pathLength: 0, opacity: 0 }}
-                          animate={{ pathLength: 1, opacity: 1 }}
-                          transition={{ duration: 0.6, delay: 0.15 * i, ease: "easeInOut" }}
-                        />
-                      </motion.svg>
-                      <motion.div
-                        className="absolute z-10 flex items-center gap-2 bg-white text-black text-[11px] font-medium px-3 py-1.5 rounded-full shadow-lg"
-                        style={{ top: `calc(${a.top} - 1.75rem)`, left: a.left }}
-                        initial={{ opacity: 0, y: 8, scale: 0.8 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.4 + 0.15 * i }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal" />
-                        {a.note}
-                      </motion.div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="dev"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute inset-0 p-6 font-mono text-[13px] leading-relaxed"
-              >
-                <div className="flex items-center gap-1.5 mb-4">
-                  <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
-                  <span className="text-white/30 text-[11px] ml-3">LeadCard.tsx</span>
-                </div>
-                {codeLines.map((line, i) => (
-                  <TypedLine key={i} text={line.text} indent={line.indent} delay={i * 90} />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <DesignPanel />
         </div>
       </div>
     </section>

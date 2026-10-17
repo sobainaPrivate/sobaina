@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, FileText } from "lucide-react";
-import { projects } from "@/data/projects";
+import { projects } from "@/data/dev/projects";
 import PdfViewer from "@/components/pdf-viewer";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
