@@ -31,3 +31,7 @@ dist-ssr
 # Windows folder metadata
 desktop.ini
 Thumbs.db
+
+# Notes for Claude Code (kept local, not published)
+CLAUDE.md
+.claude/
